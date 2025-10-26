@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: batch-service
+  namespace: kafka
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: batch-service
+  template:
+    metadata:
+      labels:
+        app: batch-service
+    spec:
+      containers:
+        - name: batch-service
+          image: docker.io/<DOCKER_USERNAME>/batch-service:latest
+          env:
+            - name: KAFKA_BROKER
+              value: "my-cluster-kafka-bootstrap.kafka:9092"
+            - name: KAFKA_TOPIC
+              value: "test-topic"
+          volumeMounts:
+            - name: data-volume
+              mountPath: /data
+      volumes:
+        - name: data-volume
+          configMap:
+            name: batch-data
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: batch-data
+  namespace: kafka
+data:
+  data.csv: |
+    line1
+    line2
+    line3
