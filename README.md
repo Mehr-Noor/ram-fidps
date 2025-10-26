@@ -1,2 +1,2 @@
-# ram-fidps
+# basic CI/CD pipeline
 FIDPS
