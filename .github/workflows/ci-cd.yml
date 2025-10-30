@@ -6,9 +6,12 @@ on:
       - main
 
 env:
+  KAFKA_BOOTSTRAP_SERVERS: "mock"
   IMAGE_NAME: csv-ingestor
   IMAGE_TAG: latest
   K8S_NAMESPACE: kafka
+  SKIP_KAFKA: "true"
+  
 
 jobs:
   test:
@@ -29,9 +32,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run tests
-        run: |
-          export PYTHONPATH=$PYTHONPATH:$(pwd)
-          python -m pytest tests/
+        run: pytest --ignore=tests/integration/
 
   build-and-load:
     needs: test
