@@ -12,7 +12,7 @@ env:
 
 jobs:
   test:
-    runs-on: self-hosted  # باید روی سیستم شما اجرا شود
+    runs-on: ubuntu-latest  # باید روی سیستم شما اجرا شود
 
     steps:
       - name: Checkout code
