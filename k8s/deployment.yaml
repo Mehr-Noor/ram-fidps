@@ -1,41 +1,33 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: batch-service
+  name: csv-ingestor
   namespace: kafka
+  labels:
+    app: csv-ingestor
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: batch-service
+      app: csv-ingestor
   template:
     metadata:
       labels:
-        app: batch-service
+        app: csv-ingestor
     spec:
       containers:
-        - name: batch-service
-          image: docker.io/<DOCKER_USERNAME>/batch-service:latest
+        - name: csv-ingestor
+          image: csv-ingestor:latest   # ← اینجا تغییر می‌دهید
+          ports:
+            - containerPort: 8080
           env:
             - name: KAFKA_BROKER
-              value: "my-cluster-kafka-bootstrap.kafka:9092"
-            - name: KAFKA_TOPIC
-              value: "test-topic"
+              value: my-cluster-dual-role-0.kafka:9092
+            - name: TOPIC_NAME
+              value: csv-ingest
           volumeMounts:
-            - name: data-volume
+            - name: csv-data
               mountPath: /data
       volumes:
-        - name: data-volume
-          configMap:
-            name: batch-data
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: batch-data
-  namespace: kafka
-data:
-  data.csv: |
-    line1
-    line2
-    line3
+        - name: csv-data
+          emptyDir: {}

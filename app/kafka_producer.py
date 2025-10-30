@@ -2,10 +2,11 @@ from kafka import KafkaProducer
 import json, os
 
 def send_message(data):
-    broker = os.getenv("KAFKA_BROKER", "localhost:9092")
+    bootstrap_servers = os.getenv("BOOTSTRAP_SERVERS", "my-cluster-kafka-bootstrap:9092")
     topic = os.getenv("TOPIC_NAME", "csv-ingest")
     producer = KafkaProducer(
-        bootstrap_servers=[broker],
+        bootstrap_servers=[bootstrap_servers],
+        api_version=(2, 8, 0),
         value_serializer=lambda v: json.dumps(v).encode("utf-8")
     )
     producer.send(topic, data)
