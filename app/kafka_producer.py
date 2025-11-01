@@ -1,16 +1,24 @@
-# app/kafka_producer.py
+# kafka_producer.py
 from kafka import KafkaProducer
 import json, os
 
-def send_message(data):
-    bootstrap_servers = os.getenv("BOOTSTRAP_SERVERS", "localhost:9092")
-    topic_name = os.getenv("TOPIC_NAME", "csv-ingest")
+class KafkaProducerSingleton:
+    _producer = None
 
-    # producer درون تابع ساخته می‌شود
-    producer = KafkaProducer(
-        bootstrap_servers=[bootstrap_servers],
-        api_version=(2, 8, 0),
-        value_serializer=lambda v: json.dumps(v).encode("utf-8")
-    )
+    @classmethod
+    def get_producer(cls):
+        if cls._producer is None:
+            bootstrap_servers = os.getenv("BOOTSTRAP_SERVERS", "localhost:9092")
+            cls._producer = KafkaProducer(
+                bootstrap_servers=[bootstrap_servers],
+                api_version=(2, 8, 0),
+                value_serializer=lambda v: json.dumps(v).encode("utf-8")
+            )
+        return cls._producer
+
+def send_message(data: dict, producer=None):
+    if producer is None:
+        producer = KafkaProducerSingleton.get_producer()
+    topic_name = os.getenv("TOPIC_NAME", "csv-ingest")
     producer.send(topic_name, data)
-    producer.flush()
+    # flush را حذف کنید، تا فقط در پایان ingest_csv فراخوانی شود
