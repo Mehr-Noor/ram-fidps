@@ -15,4 +15,5 @@ def test_ingest_csv(mock_kafka_class, tmp_path):
 
     # بررسی تعداد ارسال پیام‌ها
     assert mock_producer.send.call_count == 2
+    assert mock_producer.flush.call_count == 2
     mock_producer.flush.assert_called_once()
