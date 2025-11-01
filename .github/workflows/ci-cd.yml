@@ -18,7 +18,7 @@ jobs:
 
     steps:
       - name: Clean temp directory (Windows fix)
-        shell: pwsh
+        shell: powershell
         run: |
           if (Test-Path $env:RUNNER_TEMP) {
               Remove-Item $env:RUNNER_TEMP -Recurse -Force -ErrorAction SilentlyContinue
@@ -26,7 +26,7 @@ jobs:
           }
 
       - name: Checkout code
-        uses: actions/checkout@v4   # ✅ نسخه جدیدتر برای رفع خطای EBUSY
+        uses: actions/checkout@v4  
 
       - name: Set up Python
         uses: actions/setup-python@v4
