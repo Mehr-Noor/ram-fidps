@@ -1,6 +1,13 @@
 from unittest.mock import patch
 import app.kafka_producer as kafka_producer
 
+def ingest_csv(file_path):
+    df = pd.read_csv(file_path)
+    for _, row in df.iterrows():
+        message = row.to_dict()
+        send_message(message)
+
+
 @patch.object(kafka_producer, 'producer')
 def test_ingest_csv(mock_producer, tmp_path):
     test_file = tmp_path / "test.csv"
