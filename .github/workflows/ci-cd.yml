@@ -21,29 +21,30 @@ jobs:
         shell: powershell
         run: |
           if (Test-Path $env:RUNNER_TEMP) {
-               Get-ChildItem $env:RUNNER_TEMP -Recurse -Force | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
-             }
+              Get-ChildItem $env:RUNNER_TEMP -Recurse -Force | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+          }
 
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          clean: true
+          clean: true   # پاکسازی خودکار قبل از checkout
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.11"
+          python-version: 3.11
 
       - name: Install dependencies
+        shell: powershell
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest
 
       - name: Run tests
-        shell: bash
+        shell: powershell
         run: |
-          export PYTHONPATH="${PYTHONPATH}:$GITHUB_WORKSPACE"
+          $env:PYTHONPATH = "${env:PYTHONPATH};$env:GITHUB_WORKSPACE"
           pytest --ignore=tests/integration/
 
   build-and-load:
@@ -53,12 +54,16 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          clean: true
 
       - name: Build Docker image
-        run: docker build -t $IMAGE_NAME:$IMAGE_TAG .
+        shell: powershell
+        run: docker build -t $env:IMAGE_NAME:$env:IMAGE_TAG .
 
       - name: Load image into Kind
-        run: kind load docker-image $IMAGE_NAME:$IMAGE_TAG --name kind
+        shell: powershell
+        run: kind load docker-image $env:IMAGE_NAME:$env:IMAGE_TAG --name kind
 
   deploy:
     needs: build-and-load
@@ -67,6 +72,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          clean: true
 
       - name: Set up kubectl
         uses: azure/setup-kubectl@v3
@@ -74,11 +81,12 @@ jobs:
           version: 'v1.33.1'
 
       - name: Configure kubeconfig
-        shell: bash
-        run: export KUBECONFIG=$HOME/.kube/config  # مسیر KUBECONFIG خودت رو اینجا بذار اگر فرق داره
+        shell: powershell
+        run: |
+          $env:KUBECONFIG = "$HOME\.kube\config"
 
       - name: Deploy to Kubernetes
-        shell: bash
+        shell: powershell
         run: |
-          kubectl set image deployment/csv-ingestor csv-ingestor=$IMAGE_NAME:$IMAGE_TAG -n $K8S_NAMESPACE
-          kubectl rollout status deployment/csv-ingestor -n $K8S_NAMESPACE
+          kubectl set image deployment/csv-ingestor csv-ingestor=$env:IMAGE_NAME:$env:IMAGE_TAG -n $env:K8S_NAMESPACE
+          kubectl rollout status deployment/csv-ingesto
