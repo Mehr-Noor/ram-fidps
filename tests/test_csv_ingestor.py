@@ -2,6 +2,10 @@ from unittest.mock import patch
 import pandas as pd
 import app.kafka_producer as kafka_producer
 
+def send_message(data):
+    producer.send(topic_name, data)
+    producer.flush()
+
 def ingest_csv(file_path):
     df = pd.read_csv(file_path)
     for _, row in df.iterrows():
