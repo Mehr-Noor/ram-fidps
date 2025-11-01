@@ -21,12 +21,13 @@ jobs:
         shell: powershell
         run: |
           if (Test-Path $env:RUNNER_TEMP) {
-              Remove-Item $env:RUNNER_TEMP -Recurse -Force -ErrorAction SilentlyContinue
-              mkdir $env:RUNNER_TEMP
-          }
+               Get-ChildItem $env:RUNNER_TEMP -Recurse -Force | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+             }
 
       - name: Checkout code
-        uses: actions/checkout@v4  
+        uses: actions/checkout@v4
+        with:
+          clean: true
 
       - name: Set up Python
         uses: actions/setup-python@v4
