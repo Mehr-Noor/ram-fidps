@@ -15,7 +15,7 @@ env:
 
 jobs:
   test:
-    runs-on: ubuntu-latest  # باید روی سیستم شما اجرا شود
+    runs-on: self-hosted
 
     steps:
       - name: Checkout code
