@@ -1,4 +1,5 @@
 from unittest.mock import patch
+import pandas as pd
 import app.kafka_producer as kafka_producer
 
 def ingest_csv(file_path):
