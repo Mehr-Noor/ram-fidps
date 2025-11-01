@@ -11,38 +11,47 @@ env:
   IMAGE_TAG: latest
   K8S_NAMESPACE: kafka
   SKIP_KAFKA: "true"
-  
 
 jobs:
   test:
     runs-on: self-hosted
 
     steps:
+      - name: Clean temp directory (Windows fix)
+        shell: pwsh
+        run: |
+          if (Test-Path $env:RUNNER_TEMP) {
+              Remove-Item $env:RUNNER_TEMP -Recurse -Force -ErrorAction SilentlyContinue
+              mkdir $env:RUNNER_TEMP
+          }
+
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4   # ✅ نسخه جدیدتر برای رفع خطای EBUSY
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: 3.11
+          python-version: "3.11"
 
       - name: Install dependencies
         run: |
-           python -m pip install --upgrade pip
-           pip install -r requirements.txt
-           pip install pytest
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest
+
       - name: Run tests
+        shell: bash
         run: |
           export PYTHONPATH="${PYTHONPATH}:$GITHUB_WORKSPACE"
           pytest --ignore=tests/integration/
-        
+
   build-and-load:
     needs: test
     runs-on: self-hosted
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Build Docker image
         run: docker build -t $IMAGE_NAME:$IMAGE_TAG .
@@ -56,7 +65,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up kubectl
         uses: azure/setup-kubectl@v3
@@ -64,9 +73,11 @@ jobs:
           version: 'v1.33.1'
 
       - name: Configure kubeconfig
-        run: export KUBECONFIG=$HOME/.kube/config  # یا مسیر kubeconfig شما
+        shell: bash
+        run: export KUBECONFIG=$HOME/.kube/config  # مسیر KUBECONFIG خودت رو اینجا بذار اگر فرق داره
 
       - name: Deploy to Kubernetes
+        shell: bash
         run: |
           kubectl set image deployment/csv-ingestor csv-ingestor=$IMAGE_NAME:$IMAGE_TAG -n $K8S_NAMESPACE
           kubectl rollout status deployment/csv-ingestor -n $K8S_NAMESPACE
