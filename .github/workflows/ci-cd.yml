@@ -1,4 +1,4 @@
-name: CI/CD Pipeline (Kind Local)
+name: CI/CD Pipeline (Windows Self-Hosted)
 
 on:
   push:
@@ -17,18 +17,22 @@ jobs:
     runs-on: self-hosted
 
     steps:
+      # 1️⃣ پاکسازی محتویات فولدر TEMP بدون حذف خود فولدر
       - name: Clean temp directory (Windows fix)
         shell: powershell
         run: |
           if (Test-Path $env:RUNNER_TEMP) {
-              Get-ChildItem $env:RUNNER_TEMP -Recurse -Force | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+              Get-ChildItem $env:RUNNER_TEMP -Recurse -Force |
+                Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
           }
 
+      # 2️⃣ Checkout با clean=true برای جلوگیری از خطاهای EBUSY
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          clean: true   # پاکسازی خودکار قبل از checkout
+          clean: true
 
+      # 3️⃣ نصب Python و dependencies
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -41,10 +45,11 @@ jobs:
           pip install -r requirements.txt
           pip install pytest
 
+      # 4️⃣ اجرای تست‌ها
       - name: Run tests
         shell: powershell
         run: |
-          $env:PYTHONPATH = "${env:PYTHONPATH};$env:GITHUB_WORKSPACE"
+          $env:PYTHONPATH="$env:PYTHONPATH;$env:GITHUB_WORKSPACE"
           pytest --ignore=tests/integration/
 
   build-and-load:
@@ -82,11 +87,10 @@ jobs:
 
       - name: Configure kubeconfig
         shell: powershell
-        run: |
-          $env:KUBECONFIG = "$HOME\.kube\config"
+        run: $env:KUBECONFIG="$HOME\.kube\config"
 
       - name: Deploy to Kubernetes
         shell: powershell
         run: |
           kubectl set image deployment/csv-ingestor csv-ingestor=$env:IMAGE_NAME:$env:IMAGE_TAG -n $env:K8S_NAMESPACE
-          kubectl rollout status deployment/csv-ingesto
+          kubectl rollout status deployment/csv-ingestor -n $env:K8S_NAMESPACE
