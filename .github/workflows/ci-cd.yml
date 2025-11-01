@@ -28,12 +28,14 @@ jobs:
 
       - name: Install dependencies
         run: |
-           export PYTHONPATH="${PYTHONPATH}:$GITHUB_WORKSPACE"
-           pytest --ignore=tests/integration/
-
+           python -m pip install --upgrade pip
+           pip install -r requirements.txt
+           pip install pytest
       - name: Run tests
-        run: pytest --ignore=tests/integration/
-
+        run: |
+          export PYTHONPATH="${PYTHONPATH}:$GITHUB_WORKSPACE"
+          pytest --ignore=tests/integration/
+        
   build-and-load:
     needs: test
     runs-on: self-hosted
