@@ -17,13 +17,14 @@ jobs:
     runs-on: self-hosted
 
     steps:
-      # 🧹 پاکسازی فولدر TEMP با retry برای جلوگیری از EBUSY
-      - name: Clean temp directory (Windows safe)
+      # 1️⃣ پاکسازی فولدر موقت با retry برای جلوگیری از خطای EBUSY
+      - name: Clean temp directory safely
         shell: powershell
         run: |
           Write-Host "Cleaning runner temp directory..."
           if (Test-Path $env:RUNNER_TEMP) {
             $attempts = 0
+            $success = $false
             do {
               try {
                 Get-ChildItem -Path $env:RUNNER_TEMP -Recurse -Force -ErrorAction SilentlyContinue |
@@ -38,25 +39,24 @@ jobs:
             } while (-not $success -and $attempts -lt 3)
           }
 
-      # ⏳ کمی صبر قبل از checkout
-      - name: Wait 5s before checkout
+      # 2️⃣ انتظار کوتاه قبل از checkout برای آزاد شدن فایل‌ها
+      - name: Wait before checkout
         shell: powershell
         run: Start-Sleep -Seconds 5
 
-      # 📦 Checkout code
+      # 3️⃣ Checkout با clean=true و fetch-depth=1
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           clean: true
           fetch-depth: 1
 
-      # 🐍 نصب Python
+      # 4️⃣ نصب Python و dependencies
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
 
-      # 📦 نصب dependencies
       - name: Install dependencies
         shell: powershell
         run: |
@@ -64,31 +64,15 @@ jobs:
           pip install -r requirements.txt
           pip install pytest
 
-      # 🧪 اجرای تست‌ها
+      # 5️⃣ اجرای تست‌ها
       - name: Run tests
         shell: powershell
         run: |
-          $env:PYTHONPATH="$env:GITHUB_WORKSPACE"
+          $env:PYTHONPATH = "$env:GITHUB_WORKSPACE"
           pytest --ignore=tests/integration/
 
   build-and-load:
     needs: test
     runs-on: self-hosted
 
-    steps:
-      # Pre-clean temp directory
-      - name: Clean temp
-        shell: powershell
-        run: |
-          if (Test-Path $env:RUNNER_TEMP) {
-            Get-ChildItem -Path $env:RUNNER_TEMP -Recurse -Force -ErrorAction SilentlyContinue |
-              Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
-          }
-
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          clean: true
-          fetch-depth: 1
-
-      # 🐳 ساخت Docke
+    ste
