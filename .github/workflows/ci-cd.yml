@@ -17,26 +17,28 @@ jobs:
     runs-on: self-hosted
 
     steps:
-      # 1️⃣ پاکسازی محتویات فولدر TEMP بدون حذف خود فولدر
+      # 1️⃣ پاکسازی کامل فولدر موقت (برای رفع خطای EBUSY)
       - name: Clean temp directory (Windows fix)
         shell: powershell
         run: |
           if (Test-Path $env:RUNNER_TEMP) {
-              Get-ChildItem $env:RUNNER_TEMP -Recurse -Force |
+            try {
+              Get-ChildItem -Path $env:RUNNER_TEMP -Recurse -Force -ErrorAction SilentlyContinue |
                 Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+            } catch { Write-Host "Warning: Could not clean temp directory" }
           }
 
-      # 2️⃣ Checkout با clean=true برای جلوگیری از خطاهای EBUSY
+      # 2️⃣ کلون کردن سورس
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          clean: true
+          clean: true  # جلوگیری از cacheهای قدیمی
 
-      # 3️⃣ نصب Python و dependencies
+      # 3️⃣ نصب Python و وابستگی‌ها
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: 3.11
+          python-version: '3.11'
 
       - name: Install dependencies
         shell: powershell
@@ -49,7 +51,7 @@ jobs:
       - name: Run tests
         shell: powershell
         run: |
-          $env:PYTHONPATH="$env:PYTHONPATH;$env:GITHUB_WORKSPACE"
+          $env:PYTHONPATH = "$env:GITHUB_WORKSPACE"
           pytest --ignore=tests/integration/
 
   build-and-load:
@@ -62,13 +64,17 @@ jobs:
         with:
           clean: true
 
+      # 5️⃣ ساخت Docker image
       - name: Build Docker image
         shell: powershell
-        run: docker build -t $env:IMAGE_NAME:$env:IMAGE_TAG .
+        run: |
+          docker build -t ${env:IMAGE_NAME}:${env:IMAGE_TAG} .
 
+      # 6️⃣ بارگذاری image در kind
       - name: Load image into Kind
         shell: powershell
-        run: kind load docker-image $env:IMAGE_NAME:$env:IMAGE_TAG --name kind
+        run: |
+          kind load docker-image ${env:IMAGE_NAME}:${env:IMAGE_TAG} --name kind
 
   deploy:
     needs: build-and-load
@@ -80,17 +86,22 @@ jobs:
         with:
           clean: true
 
+      # 7️⃣ نصب kubectl
       - name: Set up kubectl
         uses: azure/setup-kubectl@v3
         with:
           version: 'v1.33.1'
 
+      # 8️⃣ تنظیم KUBECONFIG
       - name: Configure kubeconfig
         shell: powershell
-        run: $env:KUBECONFIG="$HOME\.kube\config"
+        run: |
+          $env:KUBECONFIG = "$HOME\.kube\config"
+          Write-Host "KUBECONFIG set to $env:KUBECONFIG"
 
+      # 9️⃣ دیپلوی در Kubernetes
       - name: Deploy to Kubernetes
         shell: powershell
         run: |
-          kubectl set image deployment/csv-ingestor csv-ingestor=$env:IMAGE_NAME:$env:IMAGE_TAG -n $env:K8S_NAMESPACE
-          kubectl rollout status deployment/csv-ingestor -n $env:K8S_NAMESPACE
+          kubectl set image deployment/csv-ingestor csv-ingestor=${env:IMAGE_NAME}:${env:IMAGE_TAG} -n ${env:K8S_NAMESPACE}
+          kubectl rollout status deployment/csv-ingestor -n ${env:K8S_NAMESPACE}
