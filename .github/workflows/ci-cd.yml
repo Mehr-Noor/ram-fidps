@@ -38,11 +38,11 @@ jobs:
           clean: true
           fetch-depth: 1
           persist-credentials: false
-          temp-directory: ${{ env.RUNNER_TEMP }}
+          
 
       - name: Wait after checkout
         shell: powershell
-        run: Start-Sleep -Seconds 2
+        run: Start-Sleep -Seconds 3
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -82,7 +82,7 @@ jobs:
           clean: true
           fetch-depth: 1
           persist-credentials: false
-          temp-directory: ${{ env.RUNNER_TEMP }}
+          
 
       - name: Wait after checkout
         shell: powershell
