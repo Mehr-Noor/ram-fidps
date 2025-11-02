@@ -38,14 +38,21 @@ jobs:
             } while (-not $success -and $attempts -lt 3)
           }
 
-      # 📦 2️⃣ کلون کردن سورس با clean و fetch-depth برای سرعت بیشتر
+      # ⏱️ 2️⃣ تأخیر برای آزاد شدن قفل فایل‌ها
+      - name: Wait and release temp lock
+        shell: powershell
+        run: |
+          Write-Host "🕐 Waiting 5 seconds before checkout to release file locks..."
+          Start-Sleep -Seconds 5
+
+      # 📦 3️⃣ کلون کردن سورس با clean و fetch-depth برای سرعت بیشتر
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           clean: true
           fetch-depth: 1
 
-      # 🐍 3️⃣ نصب Python و وابستگی‌ها
+      # 🐍 4️⃣ نصب Python و وابستگی‌ها
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -58,7 +65,7 @@ jobs:
           pip install -r requirements.txt
           pip install pytest
 
-      # 🧪 4️⃣ اجرای تست‌ها
+      # 🧪 5️⃣ اجرای تست‌ها
       - name: Run tests
         shell: powershell
         run: |
@@ -84,13 +91,13 @@ jobs:
           clean: true
           fetch-depth: 1
 
-      # 🐳 5️⃣ ساخت Docker image
+      # 🐳 6️⃣ ساخت Docker image
       - name: Build Docker image
         shell: powershell
         run: |
           docker build -t ${env:IMAGE_NAME}:${env:IMAGE_TAG} .
 
-      # 📦 6️⃣ بارگذاری image در kind
+      # 📦 7️⃣ بارگذاری image در kind
       - name: Load image into Kind
         shell: powershell
         run: |
@@ -115,20 +122,20 @@ jobs:
           clean: true
           fetch-depth: 1
 
-      # ☸️ 7️⃣ نصب kubectl
+      # ☸️ 8️⃣ نصب kubectl
       - name: Set up kubectl
         uses: azure/setup-kubectl@v3
         with:
           version: 'v1.33.1'
 
-      # ⚙️ 8️⃣ تنظیم KUBECONFIG
+      # ⚙️ 9️⃣ تنظیم KUBECONFIG
       - name: Configure kubeconfig
         shell: powershell
         run: |
           $env:KUBECONFIG = "$HOME\.kube\config"
           Write-Host "✅ KUBECONFIG set to $env:KUBECONFIG"
 
-      # 🚀 9️⃣ دیپلوی در Kubernetes
+      # 🚀 🔟 دیپلوی در Kubernetes
       - name: Deploy to Kubernetes
         shell: powershell
         run: |
