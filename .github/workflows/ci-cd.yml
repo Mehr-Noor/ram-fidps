@@ -11,44 +11,33 @@ env:
   IMAGE_TAG: latest
   K8S_NAMESPACE: kafka
   SKIP_KAFKA: "true"
-  # Use unique temp dir per run to prevent locking issues
-  RUNNER_TEMP: C:\actions-runner\_work\_temp\${{ github.run_id }}
+  # Use an external temp folder per run to prevent Windows EBUSY locks
+  RUNNER_TEMP: C:\temp\runner\${{ github.run_id }}
 
 jobs:
   test:
     runs-on: self-hosted
 
     steps:
-      # 🧹 Clean temp directory with retries
-      - name: Clean temp directory safely
+      # 🧹 Prepare isolated temp directory
+      - name: Prepare temp folder
         shell: powershell
         run: |
-          Write-Host "Cleaning runner temp directory..."
-          if (Test-Path $env:RUNNER_TEMP) {
-            $attempts = 0
-            $success = $false
-            do {
-              try {
-                Get-ChildItem -Path $env:RUNNER_TEMP -Recurse -Force -ErrorAction SilentlyContinue |
-                  Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
-                Write-Host "✅ Temp folder cleaned successfully."
-                $success = $true
-              } catch {
-                Write-Host "⚠️ Attempt $($attempts+1) failed: $($_.Exception.Message)"
-                Start-Sleep -Seconds 3
-                $attempts++
-              }
-            } while (-not $success -and $attempts -lt 3)
+          Write-Host "Preparing isolated temp folder: $env:RUNNER_TEMP"
+          if (!(Test-Path $env:RUNNER_TEMP)) {
+            New-Item -Path $env:RUNNER_TEMP -ItemType Directory | Out-Null
           }
+          Get-ChildItem -Path $env:RUNNER_TEMP -Recurse -Force -ErrorAction SilentlyContinue |
+            Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
 
-      # ⏳ Wait before checkout (Windows file handles need a moment to close)
+      # ⏳ Small delay to ensure Windows releases file handles
       - name: Wait before checkout
         shell: powershell
-        run: Start-Sleep -Seconds 5
+        run: Start-Sleep -Seconds 3
 
-      # 📦 Checkout repository
+      # 📦 Checkout repository (latest stable patch version)
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.1.7
         with:
           clean: true
           fetch-depth: 1
@@ -80,18 +69,19 @@ jobs:
     runs-on: self-hosted
 
     steps:
-      # 🧹 Pre-clean temp dir before checkout
-      - name: Pre-clean temp directory
+      # 🧹 Prepare isolated temp folder again
+      - name: Prepare temp folder
         shell: powershell
         run: |
-          if (Test-Path $env:RUNNER_TEMP) {
-            Get-ChildItem -Path $env:RUNNER_TEMP -Recurse -Force -ErrorAction SilentlyContinue |
-              Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+          if (!(Test-Path $env:RUNNER_TEMP)) {
+            New-Item -Path $env:RUNNER_TEMP -ItemType Directory | Out-Null
           }
+          Get-ChildItem -Path $env:RUNNER_TEMP -Recurse -Force -ErrorAction SilentlyContinue |
+            Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
 
       # 📦 Checkout code
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.1.7
         with:
           clean: true
           fetch-depth: 1
@@ -112,18 +102,19 @@ jobs:
     runs-on: self-hosted
 
     steps:
-      # 🧹 Clean temp directory again
-      - name: Pre-clean temp directory
+      # 🧹 Clean isolated temp folder
+      - name: Prepare temp folder
         shell: powershell
         run: |
-          if (Test-Path $env:RUNNER_TEMP) {
-            Get-ChildItem -Path $env:RUNNER_TEMP -Recurse -Force -ErrorAction SilentlyContinue |
-              Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+          if (!(Test-Path $env:RUNNER_TEMP)) {
+            New-Item -Path $env:RUNNER_TEMP -ItemType Directory | Out-Null
           }
+          Get-ChildItem -Path $env:RUNNER_TEMP -Recurse -Force -ErrorAction SilentlyContinue |
+            Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
 
       # 📦 Checkout code
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.1.7
         with:
           clean: true
           fetch-depth: 1
