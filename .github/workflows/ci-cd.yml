@@ -11,13 +11,15 @@ env:
   IMAGE_TAG: latest
   K8S_NAMESPACE: kafka
   SKIP_KAFKA: "true"
+  # Use unique temp dir per run to prevent locking issues
+  RUNNER_TEMP: C:\actions-runner\_work\_temp\${{ github.run_id }}
 
 jobs:
   test:
     runs-on: self-hosted
 
     steps:
-      # 1️⃣ پاکسازی فولدر موقت با retry برای جلوگیری از خطای EBUSY
+      # 🧹 Clean temp directory with retries
       - name: Clean temp directory safely
         shell: powershell
         run: |
@@ -29,7 +31,7 @@ jobs:
               try {
                 Get-ChildItem -Path $env:RUNNER_TEMP -Recurse -Force -ErrorAction SilentlyContinue |
                   Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
-                Write-Host "Temp folder cleaned successfully."
+                Write-Host "✅ Temp folder cleaned successfully."
                 $success = $true
               } catch {
                 Write-Host "⚠️ Attempt $($attempts+1) failed: $($_.Exception.Message)"
@@ -39,24 +41,26 @@ jobs:
             } while (-not $success -and $attempts -lt 3)
           }
 
-      # 2️⃣ انتظار کوتاه قبل از checkout برای آزاد شدن فایل‌ها
+      # ⏳ Wait before checkout (Windows file handles need a moment to close)
       - name: Wait before checkout
         shell: powershell
         run: Start-Sleep -Seconds 5
 
-      # 3️⃣ Checkout با clean=true و fetch-depth=1
-      - name: Checkout code
+      # 📦 Checkout repository
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           clean: true
           fetch-depth: 1
+          persist-credentials: false
 
-      # 4️⃣ نصب Python و dependencies
+      # 🐍 Set up Python
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
+      # 📦 Install dependencies
       - name: Install dependencies
         shell: powershell
         run: |
@@ -64,7 +68,7 @@ jobs:
           pip install -r requirements.txt
           pip install pytest
 
-      # 5️⃣ اجرای تست‌ها
+      # 🧪 Run tests
       - name: Run tests
         shell: powershell
         run: |
@@ -76,6 +80,7 @@ jobs:
     runs-on: self-hosted
 
     steps:
+      # 🧹 Pre-clean temp dir before checkout
       - name: Pre-clean temp directory
         shell: powershell
         run: |
@@ -84,16 +89,20 @@ jobs:
               Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
           }
 
+      # 📦 Checkout code
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           clean: true
           fetch-depth: 1
+          persist-credentials: false
 
+      # 🐳 Build Docker image
       - name: Build Docker image
         shell: powershell
         run: docker build -t ${env:IMAGE_NAME}:${env:IMAGE_TAG} .
 
+      # 🚚 Load image into Kind
       - name: Load image into Kind
         shell: powershell
         run: kind load docker-image ${env:IMAGE_NAME}:${env:IMAGE_TAG} --name kind
@@ -103,6 +112,7 @@ jobs:
     runs-on: self-hosted
 
     steps:
+      # 🧹 Clean temp directory again
       - name: Pre-clean temp directory
         shell: powershell
         run: |
@@ -111,23 +121,28 @@ jobs:
               Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
           }
 
+      # 📦 Checkout code
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           clean: true
           fetch-depth: 1
+          persist-credentials: false
 
+      # ⚙️ Set up kubectl
       - name: Set up kubectl
-        uses: azure/setup-kubectl@v3
+        uses: azure/setup-kubectl@v4
         with:
           version: 'v1.33.1'
 
+      # 🔐 Configure kubeconfig
       - name: Configure kubeconfig
         shell: powershell
         run: |
           $env:KUBECONFIG = "$HOME\.kube\config"
           Write-Host "KUBECONFIG set to $env:KUBECONFIG"
 
+      # 🚀 Deploy to Kubernetes
       - name: Deploy to Kubernetes
         shell: powershell
         run: |
